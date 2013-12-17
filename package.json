@@ -1,0 +1,26 @@
+{
+  "name": "cowboy-cli-api",
+  "description": "An API that interacts with the cowboy cli programmatically",
+  "version": "0.0.1",
+  "homepage": "https://github.com/mrvisser/node-cowboy-cli-api",
+  "author": {
+    "name": "Branden Visser",
+    "email": "mrvisser@gmail.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mrvisser/node-cowboy-cli-api.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mrvisser/node-cowboy-cli-api/issues"
+  },
+  "main": "./index.js",
+  "dependencies": {
+    "temp": "latest",
+    "underscore": "latest"
+  },
+  "engines": {
+    "node": ">=0.8"
+  }
+}
