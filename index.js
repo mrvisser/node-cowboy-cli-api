@@ -1,11 +1,27 @@
 
 var _ = require('underscore');
-var exec = require('child_process').exec;
+var childProcess = require('child_process');
 var fs = require('fs');
 var temp = require('temp');
 var util = require('util');
 
-module.exports.exec = function(config, argv, commandName, commandArgv, callback) {
+var _cwd = process.cwd();
+
+/**
+ * Set the current working directory underwhich to invoke cowboy commands
+ */
+var cwd = module.exports.cwd = function(set) {
+    if (set) {
+        _cwd = set;
+    }
+
+    return _cwd;
+};
+
+/**
+ * Execute a cowboy command
+ */
+var exec = module.exports.exec = function(config, argv, commandName, commandArgv, callback) {
     temp.open({'prefix': util.format('cowboy-%s-config', commandName), 'suffix': '.json'}, function(err, tmp) {
         if (err) {
             return callback(err);
@@ -28,7 +44,7 @@ module.exports.exec = function(config, argv, commandName, commandArgv, callback)
                 cmd += util.format(' -- %s', commandArgv.join(' '));
             }
 
-            var child = exec(cmd, callback);
+            childProcess.exec(cmd, {'cwd': _cwd}, callback);
         });
     });
 };
