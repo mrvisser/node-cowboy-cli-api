@@ -151,8 +151,9 @@ var cattle = module.exports.cattle = function(/* [config<Object>,] [argv<Array>,
             var cattle = childProcess.spawn(_cattlePath, args, {'stdio': ['ipc']});
             cattle.on('message', function(message) {
                 if (message === 'ready') {
-                    callback(null, function(sig) {
-                        return _kill(cattle, sig);
+                    callback(null, function(force, callback) {
+                        var sig = (force) ? 'SIGKILL' : 'SIGTERM';
+                        return _kill(cattle, sig, callback);
                     });
                 }
             });
@@ -171,10 +172,12 @@ var cattle = module.exports.cattle = function(/* [config<Object>,] [argv<Array>,
     });
 };
 
-var _kill = function(cattle, sig) {
+var _kill = function(cattle, sig, callback) {
     cattle.on('disconnect', function() {
+        cattle.on('exit', callback);
         cattle.kill(sig);
     });
 
     cattle.disconnect();
 };
+
