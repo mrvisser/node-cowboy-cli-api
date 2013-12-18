@@ -1,7 +1,7 @@
 {
   "name": "cowboy-cli-api",
   "description": "An API that interacts with the cowboy cli programmatically",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "homepage": "https://github.com/mrvisser/node-cowboy-cli-api",
   "author": {
     "name": "Branden Visser",
