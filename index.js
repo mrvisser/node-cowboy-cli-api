@@ -5,24 +5,51 @@ var fs = require('fs');
 var temp = require('temp');
 var util = require('util');
 
-var _cwd = process.cwd();
-
 /**
- * Set the current working directory underwhich to invoke cowboy commands
+ * Execute a cowboy command with the given config and arguments.
+ *
+ * E.g.,
+ *
+ *  cowboy('ping');
+ *  cowboy(['--help'], function(code, output) { ... });
+ *  cowboy(['--help'], 'install', ['cowboy-contrib-apt@2.1.0']);
+ *  cowboy({'log': {'level': 'info', 'path': './cowboy.log'}}, 'ping');
  */
-var cwd = module.exports.cwd = function(set) {
-    if (set) {
-        _cwd = set;
+var cowboy = module.exports.cowboy = function(/* [config<Object>,] [argv<Array>,] [command<String>,] [commandArgv<Array>,] [callback<Function>] */) {
+    var methodArguments = Array.prototype.slice.call(arguments, 0);
+
+    var config = {};
+    var argv = [];
+    var command = null;
+    var commandArgv = [];
+    var callback = function() {};
+
+    // Resolve config
+    if (_.isObject(methodArguments[0] && !_.isArray(methodArguments[0]))) {
+        config = methodArguments.shift();
+    }
+    
+    // Resolve argv
+    if (_.isArray(methodArguments[0])) {
+        argv = methodArguments.shift();
     }
 
-    return _cwd;
-};
+    // Resolve command
+    if (_.isString(methodArguments[0])) {
+        command = methodArguments.shift();
+    }
 
-/**
- * Execute a cowboy command
- */
-var exec = module.exports.exec = function(config, argv, commandName, commandArgv, callback) {
-    temp.open({'prefix': util.format('cowboy-%s-config', commandName), 'suffix': '.json'}, function(err, tmp) {
+    // Resolve commandArgv
+    if (_.isArray(methodArguments[0])) {
+        commandArgv = methodArguments.shift();
+    }
+
+    // Resolve callback
+    if (_.isFunction(methodArguments[0])) {
+        callback = methodArguments.shift();
+    }
+
+    temp.open({'prefix': util.format('cowboy-%s-config', command), 'suffix': '.json'}, function(err, tmp) {
         if (err) {
             return callback(err);
         }
@@ -33,18 +60,89 @@ var exec = module.exports.exec = function(config, argv, commandName, commandArgv
                 return callback(err);
             }
 
-            var cmd = util.format('cowboy %s', commandName);
-            if (!_.isEmpty(argv)) {
-                cmd += util.format(' %s', argv.join(' '));
-            }
-
-           cmd += util.format(' --config "%s" %s', tmp.path, commandName);
-
+            var args = _.chain([]).union(argv, ['--config', tmp.path], command).compact().value();
             if (!_.isEmpty(commandArgv)) {
-                cmd += util.format(' -- %s', commandArgv.join(' '));
+                args = _.union(args, '--', commandArgv);
             }
 
-            childProcess.exec(cmd, {'cwd': _cwd}, callback);
+            var cowboy = childProcess.spawn('cowboy', args, {'stdio': 'pipe'});
+            var output = '';
+
+            cowboy.stdout.setEncoding('utf-8');
+            cowboy.stderr.setEncoding('utf-8');
+            cowboy.stdout.on('data', function(data) { output += data; });
+            cowboy.stderr.on('data', function(data) { output += data; });
+
+            cowboy.on('close', function(code, signal) {
+                return callback(code, output);
+            });
+        });
+    });
+};
+
+/**
+ * Launch the cattle server with the given config and arguments.
+ *
+ * E.g.,
+ *
+ *  cattle();
+ *  cattle(function() { // Listening });
+ *  cattle(['--log-path', './cattle.log']);
+ */
+var cattle = module.exports.cattle = function(/* [config<Object>,] [argv<Array>,] [callback<Function>] */) {
+    var methodArguments = Array.prototype.slice.call(arguments, 0);
+
+    var config = {};
+    var argv = [];
+    var callback = function() {};
+
+    // Resolve config
+    if (_.isObject(methodArguments[0] && !_.isArray(methodArguments[0]))) {
+        config = methodArguments.shift();
+    }
+    
+    // Resolve argv
+    if (_.isArray(methodArguments[0])) {
+        argv = methodArguments.shift();
+    }
+
+    // Resolve callback
+    if (_.isFunction(methodArguments[0])) {
+        callback = methodArguments.shift();
+    }
+
+    temp.open({'prefix': 'cattle-config', 'suffix': '.json'}, function(err, tmp) {
+        if (err) {
+            return callback(err);
+        }
+
+        // Write the configuration file
+        fs.writeFile(tmp.path, JSON.stringify(config, null, 4), function(err) {
+            if (err) {
+                return callback(err);
+            }
+
+            var args = _.chain([]).union(argv, ['--config', tmp.path]).compact().value();
+            var cattle = childProcess.spawn('cattle', args, {'stdio': ['ipc']});
+            cattle.on('message', function(message) {
+                if (message === 'ready') {
+                    return callback(null, function() {
+                        var sig = (force) ? 'SIGKILL' : 'SIGTERM';
+                        return cattle.kill(sig);
+                    });
+                }
+            });
+
+            var hasKill = false;
+            var _kill = function() {
+                if (hasKill) {
+                    cattle.kill('SIGKILL');
+                    process.exit(1);
+                } else {
+                    hasKill = true;
+                    cattle.kill();
+                }
+            };
         });
     });
 };
