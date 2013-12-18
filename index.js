@@ -85,9 +85,21 @@ var cowboy = module.exports.cowboy = function(/* [config<Object>,] [argv<Array>,
                 return callback(err);
             }
 
-            var args = _.chain([]).union(argv, ['--config', tmp.path], command).compact().value();
+            // Start with the cowboy argv
+            var args = argv.slice();
+
+            // Push the custom config
+            args.push('--config', tmp.path);
+
+            // Push the command if specified
+            if (command) {
+                args.push(command);
+            }
+
+            // Push the command args if specified
             if (!_.isEmpty(commandArgv)) {
-                args = _.union(args, '--', commandArgv);
+                args.push('--');
+                Array.prototype.push(args, commandArgv);
             }
 
             var cowboy = childProcess.spawn(_cowboyPath, args, {'stdio': 'pipe'});
@@ -147,7 +159,10 @@ var cattle = module.exports.cattle = function(/* [config<Object>,] [argv<Array>,
                 return callback(err);
             }
 
-            var args = _.chain([]).union(argv, ['--config', tmp.path]).compact().value();
+            // Append the config path to the argv
+            var args = argv.slice();
+            args.push('--config', tmp.path);
+
             var cattle = childProcess.spawn(_cattlePath, args, {'stdio': ['ipc']});
             cattle.on('message', function(message) {
                 if (message === 'ready') {
