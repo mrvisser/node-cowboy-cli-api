@@ -122,7 +122,7 @@ var cattle = module.exports.cattle = function(/* [config<Object>,] [argv<Array>,
     var callback = function() {};
 
     // Resolve config
-    if (_.isObject(methodArguments[0] && !_.isArray(methodArguments[0]))) {
+    if (_.isObject(methodArguments[0]) && !_.isArray(methodArguments[0])) {
         config = methodArguments.shift();
     }
     
