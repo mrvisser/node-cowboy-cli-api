@@ -5,6 +5,31 @@ var fs = require('fs');
 var temp = require('temp');
 var util = require('util');
 
+var _cattlePath = 'cattle';
+var _cowboyPath = 'cowboy';
+
+/**
+ * Get or set the path to use for the cattle binary
+ */
+var cattlePath = module.exports.cattlePath = function(cattlePath) {
+    if (cattlePath) {
+        _cattlePath = cattlePath;
+    }
+
+    return _cattlePath;
+};
+
+/**
+ * Get or set the path to use for the cowboy binary
+ */
+var cowboyPath = module.exports.cowboyPath = function(cowboyPath) {
+    if (cowboyPath) {
+        _cowboyPath = cowboyPath;
+    }
+
+    return _cowboyPath;
+};
+
 /**
  * Execute a cowboy command with the given config and arguments.
  *
@@ -65,7 +90,7 @@ var cowboy = module.exports.cowboy = function(/* [config<Object>,] [argv<Array>,
                 args = _.union(args, '--', commandArgv);
             }
 
-            var cowboy = childProcess.spawn('cowboy', args, {'stdio': 'pipe'});
+            var cowboy = childProcess.spawn(_cowboyPath, args, {'stdio': 'pipe'});
             var output = '';
 
             cowboy.stdout.setEncoding('utf-8');
@@ -123,7 +148,7 @@ var cattle = module.exports.cattle = function(/* [config<Object>,] [argv<Array>,
             }
 
             var args = _.chain([]).union(argv, ['--config', tmp.path]).compact().value();
-            var cattle = childProcess.spawn('cattle', args, {'stdio': ['ipc']});
+            var cattle = childProcess.spawn(_cattlePath, args, {'stdio': ['ipc']});
             cattle.on('message', function(message) {
                 if (message === 'ready') {
                     return callback(null, function() {
