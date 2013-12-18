@@ -99,7 +99,7 @@ var cowboy = module.exports.cowboy = function(/* [config<Object>,] [argv<Array>,
             // Push the command args if specified
             if (!_.isEmpty(commandArgv)) {
                 args.push('--');
-                Array.prototype.push(args, commandArgv);
+                Array.prototype.push.apply(args, commandArgv);
             }
 
             var cowboy = childProcess.spawn(_cowboyPath, args, {'stdio': 'pipe'});
